@@ -465,7 +465,7 @@
 <header>
   <div class="tag">Deep Learning · CVPR 2018</div>
   <h1>What if Your Neural Network Already Knew How to Fix Images — Before Training?</h1>
-  <p class="subtitle">A deep dive into Deep Image Prior, and why it broke everything I thought I knew about deep learning</p>
+  <p class="subtitle">A deep dive into Deep Image Prior, and why it broke everything we thought we knew about deep learning</p>
   <p class="byline"><span>Team 39</span> &nbsp;·&nbsp; <span>GNR638 Spring 2025</span> &nbsp;·&nbsp; <span>~12 min read</span></p>
 </header>
 
@@ -594,7 +594,7 @@
   <h2>Why Does This Even Work? The "Noise Impedance" Effect</h2>
 
   <p>
-    This is the part of the paper I found most fascinating. You might be thinking: <em>"If the network has 2 million parameters and we're fitting it to one image, won't it just memorize the noise too?"</em>
+    This is the part of the paper we found most fascinating. You might be thinking: <em>"If the network has 2 million parameters and we're fitting it to one image, won't it just memorize the noise too?"</em>
   </p>
   <p>
     Eventually, yes. But here's the thing — it does so at very different speeds for signal vs. noise.
@@ -718,25 +718,8 @@
 
   <div class="figure">
     <div class="figure-inner">
-      <div class="figure-grid cols-4">
-        <div>
-          <div class="fig-cell fig-gt"></div>
-          <div class="fig-label">(a) Ground truth</div>
-        </div>
-        <div>
-          <div class="fig-cell fig-blurry"></div>
-          <div class="fig-label">(b) Bicubic — not trained</div>
-        </div>
-        <div>
-          <div class="fig-cell fig-sharp"></div>
-          <div class="fig-label">(c) Deep Prior — not trained</div>
-        </div>
-        <div>
-          <div class="fig-cell fig-clean"></div>
-          <div class="fig-label">(d) SRResNet — trained</div>
-        </div>
-      </div>
-      <figcaption><strong>Illustrative comparison for 4× super-resolution.</strong> Without seeing any external images, Deep Image Prior produces much sharper edges than bicubic upsampling, approaching the quality of SRResNet which trains on large datasets.</figcaption>
+      <img src="./images/sr_comparison.png" alt="4x super-resolution comparison: Original, Bicubic, Deep Image Prior, LapSRN, SRResNet" style="width:100%; border-radius:3px; display:block;"/>
+      <figcaption style="margin-top:0.75rem;"><strong>Figure 5 from the paper — 4× super-resolution comparison.</strong> From left to right: original image, bicubic upsampling (not trained), Deep Image Prior (not trained), LapSRN (trained), SRResNet (trained). Without seeing any external images, Deep Image Prior produces much sharper edges than bicubic, approaching the quality of fully trained methods.</figcaption>
     </div>
   </div>
 
@@ -758,7 +741,7 @@
     For inpainting, architectures <em>without</em> skip connections actually work better. Usually skip connections are great because they let low-level features pass directly from encoder to decoder. But for inpainting, that means the corrupted signal can pass through unmodified, short-circuiting the prior. Removing skip connections forces the network to "think harder" about how to fill gaps. This is a nice reminder that inductive biases are task-dependent.
   </div>
 
-  <div class="section-rule"><span>What I Found Most Interesting</span></div>
+  <div class="section-rule"><span>What We Found Most Interesting</span></div>
 
   <h2>The Early Stopping Trick — And Why It's Not Obvious</h2>
 
@@ -793,7 +776,7 @@
 
   <div class="section-rule"><span>My Take</span></div>
 
-  <h2>What I Think This Paper Gets Right (And Where It Falls Short)</h2>
+  <h2>What We Think This Paper Gets Right (And Where It Falls Short)</h2>
 
   <p>
     We genuinely think this is one of the more elegant papers we've read so far in this course. The core insight — that architecture itself is a prior — is simple but profound, and it makes you rethink the standard narrative around why deep learning works.
@@ -814,7 +797,7 @@
   </div>
 
   <p>
-    Also, I want to be careful not to over-claim what the paper proves. It doesn't say training is useless. It says the <em>architecture</em> contributes more than we usually credit. Trained networks are still much better at tasks that require semantic knowledge. The claim is about low-level statistics — textures, edges, frequencies — not high-level understanding.
+    Also, we want to be careful not to over-claim what the paper proves. It doesn't say training is useless. It says the <em>architecture</em> contributes more than we usually credit. Trained networks are still much better at tasks that require semantic knowledge. The claim is about low-level statistics — textures, edges, frequencies — not high-level understanding.
   </p>
 
   <div class="section-rule"><span>Wrap-Up</span></div>
@@ -878,3 +861,4 @@ torch.backends.cudnn.enabled = <span class="kw">False</span>  <span class="cm">#
 </script>
 </body>
 </html>
+
