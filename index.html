@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Deep Image Prior — A Blog Post</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --paper: #f5f0e8;
+    --accent: #c0392b;
+    --muted: #6b6560;
+    --rule: #d4cfc6;
+    --highlight: #fff3cd;
+    --code-bg: #2b2b2b;
+    --code-text: #f8f8f2;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 300;
+    font-size: 18px;
+    line-height: 1.85;
+    padding: 0;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3rem 2rem 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 20px,
+      rgba(255,255,255,0.02) 20px,
+      rgba(255,255,255,0.02) 40px
+    );
+  }
+
+  .tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    margin-bottom: 1.5rem;
+    border-radius: 2px;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1.15;
+    max-width: 780px;
+    margin: 0 auto 1rem;
+    position: relative;
+  }
+
+  header .subtitle {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    color: rgba(245,240,232,0.65);
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    position: relative;
+  }
+
+  .byline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: rgba(245,240,232,0.45);
+    position: relative;
+  }
+  .byline span { color: rgba(245,240,232,0.7); }
+
+  /* PROGRESS BAR */
+  .progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    width: 0%;
+    background: var(--accent);
+    z-index: 999;
+    transition: width 0.1s;
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 3rem 2rem 6rem;
+  }
+
+  /* TYPOGRAPHY */
+  p { margin-bottom: 1.5rem; }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    font-weight: 700;
+    margin: 3.5rem 0 1rem;
+    line-height: 1.2;
+  }
+
+  h3 {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--accent);
+    margin: 2.5rem 0 0.75rem;
+  }
+
+  /* SECTION DIVIDER */
+  .section-rule {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 3rem 0 2rem;
+  }
+  .section-rule::before, .section-rule::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+  .section-rule span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* CALLOUT / BLOCKQUOTE */
+  blockquote {
+    border-left: 3px solid var(--accent);
+    margin: 2rem 0;
+    padding: 1rem 1.5rem;
+    background: white;
+    font-style: italic;
+    color: var(--ink);
+    font-size: 1.05rem;
+  }
+  blockquote strong { font-style: normal; color: var(--accent); }
+
+  /* HIGHLIGHT BOX */
+  .highlight-box {
+    background: var(--highlight);
+    border: 1px solid #e0d080;
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+    margin: 2rem 0;
+    font-size: 0.95rem;
+  }
+  .highlight-box .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #9a7f00;
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  /* CODE */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    background: rgba(0,0,0,0.07);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+  }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 1.5rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    margin: 1.5rem 0 2rem;
+  }
+  pre .kw  { color: #ff79c6; }
+  pre .fn  { color: #50fa7b; }
+  pre .str { color: #f1fa8c; }
+  pre .cm  { color: #6272a4; font-style: italic; }
+  pre .num { color: #bd93f9; }
+
+  /* FIGURES */
+  .figure {
+    margin: 2.5rem -1rem;
+    text-align: center;
+  }
+  .figure-inner {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1.5rem 1rem 1rem;
+    display: inline-block;
+    width: 100%;
+  }
+  .figure-grid {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .figure-grid.cols-4 { grid-template-columns: repeat(4,1fr); }
+  .figure-grid.cols-3 { grid-template-columns: repeat(3,1fr); }
+
+  .fig-cell {
+    background: #e8e4dc;
+    border-radius: 3px;
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    position: relative;
+    overflow: hidden;
+    min-height: 80px;
+  }
+
+  /* Simulated image styles */
+  .fig-noisy { background: repeating-linear-gradient(45deg, #b5b0a8, #b5b0a8 2px, #ccc 2px, #ccc 4px); }
+  .fig-clean { background: linear-gradient(135deg, #8aab8a 0%, #5a8a6a 40%, #3a6a4a 100%); }
+  .fig-blurry { background: radial-gradient(ellipse at 40% 40%, #9ab 0%, #678 60%, #456 100%); filter: blur(2px); }
+  .fig-sharp { background: radial-gradient(ellipse at 40% 40%, #9ab 0%, #678 60%, #456 100%); }
+  .fig-masked { background: linear-gradient(135deg, #d4cfc6 25%, white 25%, white 50%, #d4cfc6 50%, #d4cfc6 75%, white 75%); }
+  .fig-restored { background: linear-gradient(135deg, #c4a882 0%, #8a7055 50%, #5a4035 100%); }
+  .fig-gt { background: linear-gradient(135deg, #8aab8a 0%, #5a8a6a 40%, #3a6a4a 100%); box-shadow: inset 0 0 0 2px #4a9a6a; }
+
+  .fig-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+    letter-spacing: 0.03em;
+  }
+
+  figcaption {
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.5;
+    margin-top: 0.5rem;
+    padding: 0 0.5rem;
+    text-align: left;
+  }
+  figcaption strong { font-style: normal; color: var(--ink); }
+
+  /* METRICS TABLE */
+  .metrics {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin: 1.5rem 0 2rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .metrics th {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.6rem 1rem;
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .metrics td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    font-family: 'Source Serif 4', serif;
+    font-size: 0.88rem;
+  }
+  .metrics tr:nth-child(even) td { background: rgba(0,0,0,0.025); }
+  .metrics .best { color: var(--accent); font-weight: 600; }
+  .metrics .ours { background: rgba(192,57,43,0.06) !important; }
+
+  /* EQUATION BOX */
+  .equation {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    overflow-x: auto;
+  }
+  .equation .eq-label {
+    float: right;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  /* STEP CARDS */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1.5rem 0 2rem;
+  }
+  .step {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+  }
+  .step-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    min-width: 1.5rem;
+    margin-top: 0.1rem;
+  }
+  .step-body { font-size: 0.92rem; line-height: 1.65; }
+  .step-body strong { display: block; margin-bottom: 0.2rem; font-family: 'Source Serif 4', serif; font-size: 1rem; }
+
+  /* ARCHITECTURE DIAGRAM */
+  .arch {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin: 1.5rem 0 2rem;
+    overflow-x: auto;
+  }
+  .arch-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .arch-block {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 4px;
+    padding: 0.5rem 0.9rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    text-align: center;
+    min-width: 80px;
+  }
+  .arch-block.noise { background: #4a4a7a; }
+  .arch-block.enc { background: #2a5a3a; }
+  .arch-block.dec { background: #5a2a2a; }
+  .arch-block.out { background: var(--accent); }
+  .arch-arrow {
+    color: var(--muted);
+    font-size: 1rem;
+    font-family: monospace;
+  }
+  .arch-label {
+    text-align: center;
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    margin-top: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  /* CONVERGENCE CHART */
+  .conv-chart {
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 1.25rem;
+    margin: 1.5rem 0 2rem;
+  }
+  .conv-chart svg { width: 100%; height: auto; display: block; }
+
+  /* TLDR BOX */
+  .tldr {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 6px;
+    padding: 1.75rem 2rem;
+    margin: 3rem 0;
+    position: relative;
+  }
+  .tldr::before {
+    content: 'TL;DR';
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    background: var(--accent);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    position: absolute;
+    top: -0.6rem;
+    left: 1.5rem;
+    border-radius: 2px;
+  }
+  .tldr p { color: rgba(245,240,232,0.85); margin-bottom: 0.5rem; font-size: 0.95rem; }
+  .tldr p:last-child { margin-bottom: 0; }
+
+  /* FOOTER */
+  footer {
+    background: var(--ink);
+    color: rgba(245,240,232,0.4);
+    text-align: center;
+    padding: 2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+  }
+  footer a { color: rgba(245,240,232,0.65); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+
+  /* LINKS */
+  a { color: var(--accent); }
+
+  /* SUPERSCRIPT CITATIONS */
+  sup { font-size: 0.7em; color: var(--accent); }
+
+  @media (max-width: 600px) {
+    header { padding: 2.5rem 1.25rem 2rem; }
+    main { padding: 2rem 1.25rem 4rem; }
+    .figure { margin: 2rem 0; }
+    .figure-grid.cols-4 { grid-template-columns: repeat(2,1fr); }
+    .arch-row { gap: 0.25rem; }
+    .arch-block { min-width: 60px; font-size: 0.65rem; padding: 0.4rem 0.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<header>
+  <div class="tag">Deep Learning · CVPR 2018</div>
+  <h1>What if Your Neural Network Already Knew How to Fix Images — Before Training?</h1>
+  <p class="subtitle">A deep dive into Deep Image Prior, and why it broke everything I thought I knew about deep learning</p>
+  <p class="byline"><span>Team 39</span> &nbsp;·&nbsp; <span>GNR638 Spring 2025</span> &nbsp;·&nbsp; <span>~12 min read</span></p>
+</header>
+
+<main>
+
+  <p>
+    Okay so we'll be honest — when the three of us first divided up the paper list and this one landed in our laps, there was a group chat message that just said <em>"deep image… prior? what does that even mean."</em> Sounds like another dense CV paper that was going to make us stare at math for three hours and argue over who had to present it. But then we actually sat down and read the abstract together, and all three of us had the same reaction: <em>"wait, that can't be right."</em>
+  </p>
+  <p>
+    Here's the one-line pitch: <strong>you can restore corrupted images using a neural network that has never seen a single training example.</strong> No dataset. No pre-training. Just a randomly initialized network and a single broken image. And it actually works really well.
+  </p>
+  <p>
+    The paper is <em>Deep Image Prior</em> by Ulyanov, Vedaldi, and Lempitsky, published at CVPR 2018. We'll try to break it down in a way that we wish someone had explained to us before we read it.</p>
+
+  <div class="tldr">
+    <p>The structure of a convolutional neural network acts as a powerful image prior all by itself — <em>before</em> any learning happens. By fitting a randomly initialized generator network to a single degraded image, you can perform denoising, super-resolution, and inpainting without any training data whatsoever.</p>
+  </div>
+
+  <div class="section-rule"><span>Background</span></div>
+
+  <h2>The Problem with the Standard Story</h2>
+
+  <p>
+    The usual explanation for why deep learning works so well on image tasks goes something like this: <em>"The network learns powerful image priors from millions of training examples. All that data gives it a rich understanding of what images should look like."</em>
+  </p>
+  <p>
+    That seems totally reasonable. If you've trained on ImageNet, you've seen dogs, cats, buildings, textures — of course you know how to reconstruct a face or upscale a snail.
+  </p>
+  <p>
+    But the Deep Image Prior paper asks an uncomfortable follow-up question: <strong>is the learning actually doing all the heavy lifting, or is some of the credit going to the network architecture itself?</strong>
+  </p>
+
+  <blockquote>
+    <strong>"We show that, on the contrary, the structure of a generator network is sufficient to capture a great deal of low-level image statistics prior to any learning."</strong>
+  </blockquote>
+
+  <p>
+    That's a pretty bold claim. They're saying the <em>shape</em> of the network — the convolutions, the upsampling layers, the skip connections — already encodes a bias toward natural-looking images, independent of what you train it on. Let's see how they prove it.
+  </p>
+
+  <div class="section-rule"><span>Core Idea</span></div>
+
+  <h2>So How Does It Actually Work?</h2>
+
+  <p>
+    The setup is elegantly simple. In a normal restoration pipeline, you'd train a network to map corrupted images to clean ones. Here, they throw that whole paradigm out the window.
+  </p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Start with a randomly initialized generator network</strong>
+        It's a U-Net style encoder-decoder ("hourglass") with skip connections. No pre-training. Completely random weights.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Fix a random noise tensor z as the input</strong>
+        This is your "code." It stays fixed throughout the entire process — you never optimize it.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Fit the network weights to a single degraded image</strong>
+        Optimize the weights θ so that f<sub>θ</sub>(z) matches the corrupted input x₀ as closely as possible. That's it.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Stop early — before the network overfits</strong>
+        Here's the magic: the network learns the clean signal before it learns the noise. Stop at the right iteration and you have a restored image.
+      </div>
+    </div>
+  </div>
+
+  <p>
+    Mathematically, standard image restoration looks like this — minimize some energy over the pixel space:
+  </p>
+  <div class="equation">
+    <span class="eq-label">(1)</span>
+    x* = min<sub>x</sub> E(x; x₀) + R(x)
+  </div>
+  <p>
+    where E is a task-specific data term and R is a regularizer (like Total Variation) that encodes what "natural images" should look like. The whole field of image processing spent decades designing clever R's.
+  </p>
+  <p>
+    Deep Image Prior replaces R entirely by reparametrizing x as the output of a network:
+  </p>
+  <div class="equation">
+    <span class="eq-label">(2)</span>
+    θ* = argmin<sub>θ</sub> E(f<sub>θ</sub>(z); x₀), &nbsp;&nbsp; x* = f<sub>θ*</sub>(z)
+  </div>
+  <p>
+    The regularizer is now implicit — it's the prior that the network architecture itself imposes. No handcrafting required.
+  </p>
+
+  <h3>The Architecture</h3>
+
+  <p>The network is a U-Net-style encoder-decoder — basically the same architecture you'd use for segmentation or generation, except here it's being used as a parametric image prior:</p>
+
+  <div class="arch">
+    <div class="arch-row">
+      <div class="arch-block noise">z<br><span style="font-size:0.6rem">random noise</span></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block enc">Encoder<br><span style="font-size:0.6rem">conv + downsample</span></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block enc">Bottleneck<br><span style="font-size:0.6rem">deepest features</span></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block dec">Decoder<br><span style="font-size:0.6rem">conv + upsample</span></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block out">x* = f<sub>θ</sub>(z)<br><span style="font-size:0.6rem">restored image</span></div>
+    </div>
+    <p class="arch-label">Skip connections between encoder and decoder levels (U-Net style) &nbsp;·&nbsp; ~2M parameters</p>
+  </div>
+
+  <p>
+    One surprising finding from the paper: for <em>inpainting</em>, skip connections are actually <em>harmful</em>. Usually skip connections are a huge win (they're the whole point of U-Net for segmentation). But here, they let the degraded input pass through too easily, interfering with the prior. Wild.
+  </p>
+
+  <div class="section-rule"><span>The Key Insight</span></div>
+
+  <h2>Why Does This Even Work? The "Noise Impedance" Effect</h2>
+
+  <p>
+    This is the part of the paper I found most fascinating. You might be thinking: <em>"If the network has 2 million parameters and we're fitting it to one image, won't it just memorize the noise too?"</em>
+  </p>
+  <p>
+    Eventually, yes. But here's the thing — it does so at very different speeds for signal vs. noise.
+  </p>
+  <p>
+    The authors run a beautiful experiment. They take four "target images" and fit the same network to each one, measuring the reconstruction loss over gradient descent iterations:
+  </p>
+
+  <div class="conv-chart">
+    <svg viewBox="0 0 560 240" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 z" fill="#6b6560"/>
+        </marker>
+      </defs>
+      <!-- Axes -->
+      <line x1="60" y1="20" x2="60" y2="200" stroke="#6b6560" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="60" y1="200" x2="540" y2="200" stroke="#6b6560" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="30" y="110" transform="rotate(-90,30,110)" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b6560" text-anchor="middle">MSE loss</text>
+      <text x="300" y="225" font-family="JetBrains Mono,monospace" font-size="9" fill="#6b6560" text-anchor="middle">Gradient descent iterations (log scale) →</text>
+
+      <!-- Grid lines -->
+      <line x1="60" y1="60" x2="535" y2="60" stroke="#e0dbd2" stroke-width="0.75" stroke-dasharray="4,3"/>
+      <line x1="60" y1="130" x2="535" y2="130" stroke="#e0dbd2" stroke-width="0.75" stroke-dasharray="4,3"/>
+
+      <!-- Natural image — drops fast to near zero -->
+      <polyline points="60,160 120,90 200,50 300,35 400,25 535,20" fill="none" stroke="#2a7a4a" stroke-width="2.5" stroke-linejoin="round"/>
+      <text x="540" y="22" font-family="Source Serif 4,serif" font-size="9.5" fill="#2a7a4a">natural image</text>
+
+      <!-- Image + noise — drops fast then settles a bit higher -->
+      <polyline points="60,162 120,95 200,65 300,52 400,44 535,40" fill="none" stroke="#2a6a9a" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="8,3"/>
+      <text x="540" y="42" font-family="Source Serif 4,serif" font-size="9.5" fill="#2a6a9a">image + noise</text>
+
+      <!-- Shuffled pixels — very slow descent -->
+      <polyline points="60,163 120,150 200,135 300,118 400,100 535,82" fill="none" stroke="#e07020" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="4,3"/>
+      <text x="540" y="84" font-family="Source Serif 4,serif" font-size="9.5" fill="#e07020">shuffled pixels</text>
+
+      <!-- White noise — barely moves -->
+      <polyline points="60,164 120,158 200,151 300,143 400,135 535,125" fill="none" stroke="#c0392b" stroke-width="2.5" stroke-linejoin="round"/>
+      <text x="540" y="127" font-family="Source Serif 4,serif" font-size="9.5" fill="#c0392b">white noise</text>
+
+      <!-- Annotations -->
+      <text x="200" y="185" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b6560">10²</text>
+      <text x="350" y="185" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b6560">10³</text>
+      <text x="490" y="185" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b6560">10⁴</text>
+      <text x="63" y="185" font-family="JetBrains Mono,monospace" font-size="8" fill="#6b6560">10¹</text>
+    </svg>
+    <figcaption style="margin-top:0.5rem;"><strong>Figure 2 (recreated).</strong> The network converges fast for natural images, slower for noisy images, and very slowly for random noise. This is the "noise impedance" effect.</figcaption>
+  </div>
+
+  <p>
+    The green line (natural image) drops to near-zero loss very fast. The red line (white noise) barely moves. The orange line (randomly shuffled pixels) is somewhere in between.
+  </p>
+  <p>
+    What this shows is that the network has a strong <strong>inductive bias toward structured, natural images</strong>. It's easy for the network to represent a natural image — it "wants to" produce something that looks like a photo. Noise is hard. The architecture resists it.
+  </p>
+
+  <blockquote>
+    Think of it this way: the network has <strong>low impedance to signal</strong> and <strong>high impedance to noise</strong>. Just like how a guitar pickup amplifies string vibrations but rejects ambient hum.
+  </blockquote>
+
+  <p>
+    For image restoration, this is exactly what you want. If you stop the optimization at the right iteration, you get the signal without the noise. The degraded input acts as a supervision signal, and the network's own architecture acts as the regularizer.
+  </p>
+
+  <div class="section-rule"><span>Applications</span></div>
+
+  <h2>Three Problems, One Framework</h2>
+
+  <p>
+    The beauty of this approach is that the same idea works for wildly different image restoration problems. You just swap out the data term E(x; x₀) and everything else stays the same.
+  </p>
+
+  <h3>1. Image Denoising</h3>
+
+  <p>
+    Given a noisy image x₀, you want to find the clean version x*. The data term is just squared pixel-wise distance:
+  </p>
+  <div class="equation">E(x; x₀) = ‖x − x₀‖²</div>
+  <p>
+    Because the network has high noise impedance, when you optimize this, it first learns the clean structure of the image before fitting the noise. Early stop = denoised image.
+  </p>
+  <p>
+    On the standard 9-image benchmark (σ=25 noise), the method achieves a PSNR of around 29.22 dB, improving to 30.43 with exponential averaging over the last few iterations, and up to 31.00 with averaging across two runs. For reference, CBM3D — a state-of-the-art traditional method that requires no pretraining — scores 31.42 dB. So they're quite competitive. Not beating the gold standard, but comparable without any training at all.
+  </p>
+
+  <table class="metrics">
+    <thead><tr><th>Method</th><th>PSNR (σ=25)</th><th>Requires Training?</th></tr></thead>
+    <tbody>
+      <tr><td>Non-local Means</td><td>30.26 dB</td><td>No</td></tr>
+      <tr class="ours"><td><strong>Deep Image Prior (ours)</strong></td><td class="best">31.00 dB</td><td>No</td></tr>
+      <tr><td>CBM3D</td><td class="best">31.42 dB</td><td>No</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2. Super-Resolution</h3>
+
+  <p>
+    Given a low-resolution image x₀, generate the high-resolution version x. The data term now involves a downsampling operator d(·):
+  </p>
+  <div class="equation">E(x; x₀) = ‖d(x) − x₀‖²</div>
+  <p>
+    Essentially: find the HR image that, when you downsample it, gives you back the LR image you started with. There are infinitely many such images — the prior is what picks the visually plausible one.
+  </p>
+  <p>
+    On Set5 and Set14 benchmarks with 4× upscaling:
+  </p>
+
+  <table class="metrics">
+    <thead><tr><th>Method</th><th>Set5 PSNR</th><th>Set14 PSNR</th><th>Uses External Data?</th></tr></thead>
+    <tbody>
+      <tr><td>Bicubic</td><td>28.43 dB</td><td>26.05 dB</td><td>No</td></tr>
+      <tr class="ours"><td><strong>Deep Image Prior (ours)</strong></td><td class="best">29.90 dB</td><td class="best">27.00 dB</td><td>No</td></tr>
+      <tr><td>SRResNet</td><td>32.10 dB</td><td>28.53 dB</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    Compared to bicubic upsampling — the classical no-training baseline — Deep Image Prior gains over 1.4 dB on Set5. That's a huge jump for something with zero data. It's still outperformed by SRResNet (which trains on a large dataset), but it visually closes most of the gap. Edges are sharper, artifacts are fewer.
+  </p>
+
+  <div class="figure">
+    <div class="figure-inner">
+      <div class="figure-grid cols-4">
+        <div>
+          <div class="fig-cell fig-gt"></div>
+          <div class="fig-label">(a) Ground truth</div>
+        </div>
+        <div>
+          <div class="fig-cell fig-blurry"></div>
+          <div class="fig-label">(b) Bicubic — not trained</div>
+        </div>
+        <div>
+          <div class="fig-cell fig-sharp"></div>
+          <div class="fig-label">(c) Deep Prior — not trained</div>
+        </div>
+        <div>
+          <div class="fig-cell fig-clean"></div>
+          <div class="fig-label">(d) SRResNet — trained</div>
+        </div>
+      </div>
+      <figcaption><strong>Illustrative comparison for 4× super-resolution.</strong> Without seeing any external images, Deep Image Prior produces much sharper edges than bicubic upsampling, approaching the quality of SRResNet which trains on large datasets.</figcaption>
+    </div>
+  </div>
+
+  <h3>3. Inpainting</h3>
+
+  <p>
+    Given a masked image (some pixels are missing), fill them in. The mask is a binary tensor m ∈ {0,1}. The data term only penalizes the known pixels:
+  </p>
+  <div class="equation">E(x; x₀) = ‖(x − x₀) ⊙ m‖²</div>
+  <p>
+    The missing pixels have no supervision from the data term — the only thing that fills them in is the network's prior. And since the network is biased toward producing spatially coherent, textured images, it fills the gaps by propagating and interpolating textures from surrounding regions. This is conceptually similar to how self-similarity-based methods work, but here it emerges naturally from the architecture.
+  </p>
+  <p>
+    They compare to Shepard Networks (a learned inpainting approach) on text removal. Their results are qualitatively comparable or better — and again, without training. They also beat convolutional sparse coding on the standard benchmark by a healthy margin (e.g., 32.22 vs 28.14 dB on Barbara).
+  </p>
+
+  <div class="highlight-box">
+    <span class="label">💡 Cool observation from the paper</span>
+    For inpainting, architectures <em>without</em> skip connections actually work better. Usually skip connections are great because they let low-level features pass directly from encoder to decoder. But for inpainting, that means the corrupted signal can pass through unmodified, short-circuiting the prior. Removing skip connections forces the network to "think harder" about how to fill gaps. This is a nice reminder that inductive biases are task-dependent.
+  </div>
+
+  <div class="section-rule"><span>What I Found Most Interesting</span></div>
+
+  <h2>The Early Stopping Trick — And Why It's Not Obvious</h2>
+
+  <p>
+    We want to spend a second on early stopping because it's easy to gloss over and it's actually doing a lot of work here.
+  </p>
+  <p>
+    When you're fitting the network to a noisy image, the optimization is minimizing:
+  </p>
+  <div class="equation">min<sub>θ</sub> ‖f<sub>θ</sub>(z) − x₀‖²</div>
+  <p>
+    In theory, with 2 million parameters and one image to fit, this network has more than enough capacity to memorize the noisy input exactly. Given infinite iterations, it will eventually do exactly that — the reconstruction at 50,000 iterations looks worse than at 2,400 iterations (they show this in Figure 3 of the paper with a JPEG-corrupted image).
+  </p>
+  <p>
+    So how do you know when to stop? The authors fix the number of iterations per task (1800 for denoising, 2000 for super-resolution). This works reasonably well in practice, but it's also kind of a hyperparameter. They mention that perturbing z randomly at each iteration helps smooth out the results (basically adds a bit of stochasticity that prevents overfitting).
+  </p>
+  <p>
+    Some follow-up work has explored using Stein's Unbiased Risk Estimator (SURE) to automatically detect the optimal stopping point without needing a clean reference. That's a natural extension worth knowing about if you're going deeper into this area.
+  </p>
+
+  <h2>Using It to Understand What Neural Networks Learn</h2>
+
+  <p>
+    There's also a bonus application in the paper we found genuinely cool — using Deep Image Prior to invert trained neural network representations.
+  </p>
+  <p>
+    The idea (called "natural pre-image") is: given a trained classifier's intermediate feature representation Φ(x₀) of some image, can you reconstruct an image x that produces the same representation? This tells you what information the network is actually retaining at each layer.
+  </p>
+  <p>
+    Previous work used Total Variation (TV norm) as a regularizer during this inversion. Deep Image Prior replaces TV with the network's structural prior. The results are dramatically better — especially for deep layers like fc6 and fc7 of AlexNet, where TV produces noisy garbage but the structured prior produces something still interpretable.
+  </p>
+
+  <div class="section-rule"><span>My Take</span></div>
+
+  <h2>What I Think This Paper Gets Right (And Where It Falls Short)</h2>
+
+  <p>
+    We genuinely think this is one of the more elegant papers we've read so far in this course. The core insight — that architecture itself is a prior — is simple but profound, and it makes you rethink the standard narrative around why deep learning works.
+  </p>
+  <p>
+    The experimental setup is clean and convincing. The same framework handles denoising, super-resolution, inpainting, and network inversion without any architectural changes. That kind of versatility is impressive.
+  </p>
+  <p>
+    That said, there are real limitations worth acknowledging:
+  </p>
+
+  <div class="highlight-box">
+    <span class="label">⚠️ Honest limitations</span>
+    <p style="margin-bottom:0.5rem"><strong>Speed:</strong> Each image takes several minutes of GPU time to restore. A trained network runs in milliseconds. This method is practically slow for real applications.</p>
+    <p style="margin-bottom:0.5rem"><strong>Early stopping is fragile:</strong> Getting the iteration count right matters. Too few = underfit, too many = overfit. There's no automatic way to find it (in the base paper).</p>
+    <p style="margin-bottom:0.5rem"><strong>No semantic understanding:</strong> For large missing regions (semantic inpainting, e.g. faces), the method doesn't know what "should" go there. It fills textures but can't hallucinate meaningful content.</p>
+    <p style="margin-bottom:0"><strong>GPU sensitivity:</strong> The optimization can fail to converge on some GPUs (the repo even has a warning about Tesla V100 and P40). You might need to switch to double precision or disable cuDNN.</p>
+  </div>
+
+  <p>
+    Also, I want to be careful not to over-claim what the paper proves. It doesn't say training is useless. It says the <em>architecture</em> contributes more than we usually credit. Trained networks are still much better at tasks that require semantic knowledge. The claim is about low-level statistics — textures, edges, frequencies — not high-level understanding.
+  </p>
+
+  <div class="section-rule"><span>Wrap-Up</span></div>
+
+  <h2>Final Thoughts</h2>
+
+  <p>
+    We came into this paper expecting to spend a few hours understanding it for an assignment — honestly, one of us definitely suggested just skimming it. We ended up actually enjoying it, which doesn't happen that often with research papers if we're being honest.
+  </p>
+  <p>
+    The core idea is almost philosophical: the way we build our networks already encodes beliefs about the world, even before we feed them any data. That's kind of wild to think about. Every time we stack convolutional layers and upsampling operations, we're not starting from a blank slate — we're building in assumptions about what images should look like.
+  </p>
+  <p>
+    Deep Image Prior makes that invisible prior visible, which we think is its biggest contribution beyond the practical results.
+  </p>
+
+  <div class="tldr">
+    <p>A randomly initialized U-Net has a strong inductive bias toward natural images. By fitting it to a single degraded image and stopping early, you get surprisingly good restoration — no training data required.</p>
+    <p>The architecture is the prior. The structure is the regularizer. Learning builds on top of this foundation, not from scratch.</p>
+  </div>
+
+  <div class="section-rule"><span>Code</span></div>
+
+  <h2>Want to Try It Yourself?</h2>
+
+  <p>The official repo is at <a href="https://github.com/DmitryUlyanov/deep-image-prior" target="_blank">github.com/DmitryUlyanov/deep-image-prior</a>. Start with the text inpainting notebook to verify it's working on your setup before running anything heavier. On Google Colab's T4 GPU, it runs without issues in our experience.</p>
+
+  <pre><span class="cm"># Quick start — text inpainting on Colab</span>
+<span class="kw">import</span> torch
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+<span class="cm"># Check your GPU is behaving</span>
+<span class="fn">print</span>(<span class="str">"CUDA available:"</span>, torch.cuda.<span class="fn">is_available</span>())
+<span class="fn">print</span>(<span class="str">"Device:"</span>, torch.cuda.<span class="fn">get_device_name</span>(<span class="num">0</span>))
+
+<span class="cm"># If convergence issues arise, try:</span>
+torch.backends.cudnn.enabled = <span class="kw">False</span>  <span class="cm"># or switch to float64</span></pre>
+
+  <p>
+    The main tasks to reproduce for a blog/assignment are: (1) text inpainting — cleanest results, easiest to verify, (2) denoising — straightforward, one forward pass per iteration, and (3) super-resolution — most visually striking results for demos.
+  </p>
+
+  <p style="margin-top:3rem; font-size:0.85rem; color:var(--muted); border-top:1px solid var(--rule); padding-top:1.5rem;">
+    <em>Written as part of GNR638 Deep Learning course. Team 39, Spring 2025. Paper: Ulyanov, D., Vedaldi, A., & Lempitsky, V. (2018). Deep Image Prior. CVPR 2018. 
+    <a href="https://dmitryulyanov.github.io/deep_image_prior" target="_blank">Project page</a> · 
+    <a href="https://github.com/DmitryUlyanov/deep-image-prior" target="_blank">GitHub</a></em>
+  </p>
+
+</main>
+
+<footer>
+  deep_image_prior_blog.html &nbsp;·&nbsp; <a href="https://github.com/DmitryUlyanov/deep-image-prior" target="_blank">github.com/DmitryUlyanov/deep-image-prior</a> &nbsp;·&nbsp; CVPR 2018
+</footer>
+
+<script>
+  const bar = document.getElementById('progress');
+  window.addEventListener('scroll', () => {
+    const total = document.body.scrollHeight - window.innerHeight;
+    bar.style.width = (window.scrollY / total * 100) + '%';
+  });
+</script>
+</body>
+</html>
